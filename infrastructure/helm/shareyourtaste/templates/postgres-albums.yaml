@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-albums
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: postgres-albums
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: postgres-albums
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-albums
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: postgres-albums
+  serviceName: "postgres-albums"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres-albums
+    spec:
+      containers:
+      - name: postgres
+        image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+        imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+        env:
+        - name: POSTGRES_DB
+          value: "{{ .Values.albums.db.name }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.albums.db.user }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.albums.db.password }}"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.postgres.storage.size }}

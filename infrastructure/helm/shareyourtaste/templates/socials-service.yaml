@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: socials
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: socials
+  ports:
+    - port: {{ .Values.socials.service.port }}
+      targetPort: {{ .Values.socials.service.port }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: socials
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.socials.replicaCount }}
+  selector:
+    matchLabels:
+      app: socials
+  template:
+    metadata:
+      labels:
+        app: socials
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z {{ .Values.socials.db.host }} 5432; do echo waiting for {{ .Values.socials.db.host }}; sleep 2; done;']
+      containers:
+      - name: socials
+        image: "{{ .Values.socials.image.repository }}:{{ .Values.socials.image.tag }}"
+        imagePullPolicy: {{ .Values.socials.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.socials.service.port }}
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secrets
+        env:
+        - name: DB_URL
+          value: "postgresql://$(DB_USER_SOCIAL):$(DB_PASS_SOCIAL)@$(DB_HOST_SOCIALS):5432/$(DB_NAME_SOCIAL)"

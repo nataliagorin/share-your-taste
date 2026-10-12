@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-socials
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: postgres-socials
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: postgres-socials
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-socials
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: postgres-socials
+  serviceName: "postgres-socials"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres-socials
+    spec:
+      containers:
+      - name: postgres
+        image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+        imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+        env:
+        - name: POSTGRES_DB
+          value: "{{ .Values.socials.db.name }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.socials.db.user }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.socials.db.password }}"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.postgres.storage.size }}

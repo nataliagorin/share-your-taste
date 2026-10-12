@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: auth
+  ports:
+    - port: {{ .Values.auth.service.port }}
+      targetPort: {{ .Values.auth.service.port }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.auth.replicaCount }}
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z {{ .Values.auth.db.host }} 5432; do echo waiting for {{ .Values.auth.db.host }}; sleep 2; done;']
+      containers:
+      - name: auth-service
+        image: "{{ .Values.auth.image.repository }}:{{ .Values.auth.image.tag }}"
+        imagePullPolicy: {{ .Values.auth.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.auth.service.port }}
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secrets
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://$(DB_USER_AUTH):$(DB_PASS_AUTH)@$(DB_HOST_AUTH):5432/$(DB_NAME_AUTH)"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: JWT_SECRET
+        - name: ACCESS_TOKEN_EXPIRE_MINUTES
+          value: "30"

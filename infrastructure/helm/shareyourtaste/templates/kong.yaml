@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: NodePort
+  ports:
+  - name: proxy
+    port: 8000
+    targetPort: 8000
+    nodePort: {{ .Values.kong.proxy.nodePort }}
+  - name: admin
+    port: 8001
+    targetPort: 8001
+  selector:
+    app: kong
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    metadata:
+      labels:
+        app: kong
+    spec:
+      initContainers:
+      - name: wait-for-migrations
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z postgres-kong 5432; do echo waiting for db; sleep 2; done;']
+      containers:
+      - name: kong
+        image: "{{ .Values.kong.image.repository }}:{{ .Values.kong.image.tag }}"
+        env:
+        - name: KONG_DATABASE
+          value: "postgres"
+        - name: KONG_PG_HOST
+          value: "{{ .Values.kong.db.host }}"
+        - name: KONG_PG_USER
+          value: "{{ .Values.kong.db.user }}"
+        - name: KONG_PG_PASSWORD
+          value: "{{ .Values.kong.db.password }}"
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_LISTEN
+          value: "0.0.0.0:8001"
+        ports:
+        - containerPort: {{ .Values.kong.proxy.containerPort }}
+          name: proxy
+        - containerPort: {{ .Values.kong.admin.containerPort }}
+          name: admin
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 10

@@ -1,0 +1,140 @@
+global:
+  namespace: shareyourtaste
+
+# Microservices
+auth:
+  image:
+    repository: shareyourtaste/auth
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    port: 8004
+  db:
+    host: postgres-auth
+    name: auth_db
+    user: auth_user
+    password: auth_pass
+
+albums:
+  image:
+    repository: shareyourtaste/albums-artists
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    port: 8005
+  db:
+    host: postgres-albums
+    name: albums
+    user: album_user
+    password: album_pass
+
+reviews:
+  image:
+    repository: shareyourtaste/reviews
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    port: 8002
+  db:
+    host: postgres-reviews
+    name: reviews
+    user: reviews_user
+    password: reviews_pass
+
+socials:
+  image:
+    repository: shareyourtaste/socials
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    port: 8003
+  db:
+    host: postgres-socials
+    name: social
+    user: social_user
+    password: social_pass
+
+# Kong Gateway
+kong:
+  image:
+    repository: kong
+    tag: "2.8"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  proxy:
+    nodePort: 30000
+    containerPort: 8000
+  admin:
+    containerPort: 8001
+  db:
+    host: postgres-kong
+    name: kong
+    user: kong_user
+    password: kong_pass
+
+# Management Tools
+adminer:
+  enabled: true
+  image:
+    repository: adminer
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    nodePort: 30002
+
+portainer:
+  enabled: true
+  image:
+    repository: portainer/portainer-ce
+    tag: 2.19.0
+    pullPolicy: IfNotPresent
+  service:
+    nodePort: 30003
+
+# Common Database Configuration (Postgres)
+postgres:
+  image:
+    repository: postgres
+    tag: "13"
+    pullPolicy: IfNotPresent
+  storage:
+    size: 1Gi
+    storageClass: standard
+
+# Secrets (JWT)
+secrets:
+  jwt_secret: "supersecretkey"
+
+# Monitoring
+monitoring:
+  enabled: true
+  
+  metrics_server:
+    enabled: true
+    image:
+      repository: registry.k8s.io/metrics-server/metrics-server
+      tag: v0.6.3
+      pullPolicy: IfNotPresent
+    
+  prometheus:
+    image:
+      repository: prom/prometheus
+      tag: v2.45.0
+      pullPolicy: IfNotPresent
+    service:
+      nodePort: 30004
+      
+  grafana:
+    image:
+      repository: grafana/grafana
+      tag: 10.0.0
+      pullPolicy: IfNotPresent
+    service:
+      nodePort: 30005
+    admin:
+      user: admin
+      password: admin

@@ -1,0 +1,104 @@
+{{- if .Values.adminer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: adminer
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: NodePort
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: {{ .Values.adminer.service.nodePort }}
+  selector:
+    app: adminer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adminer
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adminer
+  template:
+    metadata:
+      labels:
+        app: adminer
+    spec:
+      containers:
+      - name: adminer
+        image: "{{ .Values.adminer.image.repository }}:{{ .Values.adminer.image.tag }}"
+        ports:
+        - containerPort: 8080
+{{- end }}
+---
+{{- if .Values.portainer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: portainer
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: NodePort
+  ports:
+  - port: 9000
+    targetPort: 9000
+    nodePort: {{ .Values.portainer.service.nodePort }}
+  selector:
+    app: portainer
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: portainer-sa-clusteradmin
+  namespace: {{ .Values.global.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: portainer-crb-clusteradmin-helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: portainer-sa-clusteradmin
+  namespace: {{ .Values.global.namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portainer
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portainer
+  template:
+    metadata:
+      labels:
+        app: portainer
+    spec:
+      serviceAccountName: portainer-sa-clusteradmin
+      containers:
+      - name: portainer
+        image: "{{ .Values.portainer.image.repository }}:{{ .Values.portainer.image.tag }}"
+        ports:
+        - containerPort: 9000
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: dockersock
+          mountPath: /var/run/docker.sock
+      volumes:
+      - name: data
+        emptyDir: {}
+      - name: dockersock
+        hostPath:
+          path: /var/run/docker.sock
+{{- end }}

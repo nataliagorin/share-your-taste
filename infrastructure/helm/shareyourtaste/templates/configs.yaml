@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  # Database Hosts
+  DB_HOST_AUTH: "{{ .Values.auth.db.host }}.{{ .Values.global.namespace }}.svc.cluster.local"
+  DB_HOST_ALBUMS: "{{ .Values.albums.db.host }}.{{ .Values.global.namespace }}.svc.cluster.local"
+  DB_HOST_REVIEWS: "{{ .Values.reviews.db.host }}.{{ .Values.global.namespace }}.svc.cluster.local"
+  DB_HOST_SOCIALS: "{{ .Values.socials.db.host }}.{{ .Values.global.namespace }}.svc.cluster.local"
+  DB_HOST_KONG: "{{ .Values.kong.db.host }}.{{ .Values.global.namespace }}.svc.cluster.local"
+  
+  # Database Names
+  DB_NAME_AUTH: "{{ .Values.auth.db.name }}"
+  DB_NAME_ALBUMS: "{{ .Values.albums.db.name }}"
+  DB_NAME_REVIEWS: "{{ .Values.reviews.db.name }}"
+  DB_NAME_SOCIAL: "{{ .Values.socials.db.name }}"
+  DB_NAME_KONG: "{{ .Values.kong.db.name }}"
+  
+  # Service Ports
+  PORT_AUTH: "{{ .Values.auth.service.port }}"
+  PORT_ALBUMS: "{{ .Values.albums.service.port }}"
+  PORT_REVIEWS: "{{ .Values.reviews.service.port }}"
+  PORT_SOCIALS: "{{ .Values.socials.service.port }}"

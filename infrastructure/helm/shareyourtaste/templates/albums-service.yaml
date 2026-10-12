@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: albums-artists
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: albums-artists
+  ports:
+    - port: {{ .Values.albums.service.port }}
+      targetPort: {{ .Values.albums.service.port }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: albums-artists
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.albums.replicaCount }}
+  selector:
+    matchLabels:
+      app: albums-artists
+  template:
+    metadata:
+      labels:
+        app: albums-artists
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z {{ .Values.albums.db.host }} 5432; do echo waiting for {{ .Values.albums.db.host }}; sleep 2; done;']
+      containers:
+      - name: albums-artists
+        image: "{{ .Values.albums.image.repository }}:{{ .Values.albums.image.tag }}"
+        imagePullPolicy: {{ .Values.albums.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.albums.service.port }}
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secrets
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_USER_ALBUMS
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_PASS_ALBUMS
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_HOST_ALBUMS
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_NAME_ALBUMS
+        - name: DB_URL
+          value: "postgresql://$(DB_USER):$(DB_PASS)@$(DB_HOST):5432/$(DB_NAME)"
